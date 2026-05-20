@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -19,7 +20,6 @@ int main(int argc, char *argv[]) {
 
   int pipe2[2];
   pipe(pipe2);
-  char buffer2[512];
 
   int pid = fork();
 
@@ -30,12 +30,10 @@ int main(int argc, char *argv[]) {
     close(pipe1[1]);
     close(pipe2[0]);
 
-    size_t n = read(pipe1[0], buffer, sizeof(buffer) - 1);
-    buffer[n] = '\0';
-    printf("Data from child: %s", buffer);
-
-    write(pipe2[1], buffer, n);
-    printf("Sending message to parent\n");
+    for (int i = 0; i < 100000; i++) {
+      read(pipe1[0], buffer, sizeof(buffer) - 1);
+      write(pipe2[1], buffer, 1);
+    }
 
     close(pipe1[0]);
     close(pipe2[1]);
@@ -45,17 +43,16 @@ int main(int argc, char *argv[]) {
   else if (pid > 0) {
 
     // Parent will first send a bit
-    printf("Parent starts with sending message\n");
     close(pipe1[0]);
     close(pipe2[1]);
 
-    write(pipe1[1], "Sending message\n", 16);
-    wait(0);
+    strcpy(buffer, "a");
 
-    size_t n = read(pipe2[0], buffer2, sizeof(buffer2) - 1);
-    buffer2[n] = '\0';
-    printf("Reading message from child: %s", buffer2);
-
+    for (int i = 0; i < 100000; i++) {
+      write(pipe1[1], buffer, 1);
+      read(pipe2[0], buffer, sizeof(buffer) - 1);
+    }
+    wait(NULL);
     close(pipe1[1]);
     close(pipe2[0]);
   }
